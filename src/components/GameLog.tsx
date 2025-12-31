@@ -1,28 +1,21 @@
-//@ts-ignore
-import React from "react";
-import {Panel, SectionTitle} from "../styles/GlobalStyles";
+import React from 'react';
+import '../App.css';
 
 interface GameLogProps {
     logs: string[];
 }
 
-export const GameLog: React.FC<GameLogProps> = ({logs}) => {
+export const GameLog: React.FC<GameLogProps> = ({ logs }) => {
     return (
-        <Panel style={{gridColumn: '1 / -1', minHeight: '200px'}}>
-            <SectionTitle>Game Log</SectionTitle>
-            <div style={{maxHeight: '300px', overflowY: 'auto'}}>
+        <div className="panel" style={{ minHeight: '200px' }}>
+            <h2 className="section-title">Game Log</h2>
+            <div className="game-log-container">
                 {logs.map((log, index) => (
-                    <div
-                        key={index}
-                        style={{
-                            padding: '8px 0',
-                            borderBottom: '1px solid #444',
-                            fontFamily: 'monospace'
-                        }}>
+                    <div key={index} className="log-entry">
                         {log}
                     </div>
                 ))}
             </div>
-        </Panel>
+        </div>
     );
 };

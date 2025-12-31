@@ -1,54 +1,66 @@
-//@ts-ignore
-import React, {useState} from "react";
+import React, { useState, KeyboardEvent } from 'react';
+import '../App.css';
 
 interface ActionInputProps {
     onAction: (action: string) => void;
     disabled?: boolean;
+    placeholder?: string;
 }
 
-export const ActionInput: React.FC<ActionInputProps> = ({onAction, disabled = false}) => {
-  const [input, setInput] = useState('');
-  const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (input.trim() && !disabled){
-          onAction(input.trim());
-          setInput('');
-      }
-  };
+export const ActionInput: React.FC<ActionInputProps> = ({
+                                                            onAction,
+                                                            disabled = false,
+                                                            placeholder = "What would you like to do?"
+                                                        }) => {
+    const [input, setInput] = useState('');
 
-  return (
-    <form onSubmit={handleSubmit} style={{gridColumn: '1 / -1'}}>
-        <div style={{display:'flex', gap:'10px'}}>
-            <input
-                type= "text"
-                value= {input}
-                onChange= {(e) => setInput(e.target.value)}
-                placeholder= "Enter your action..."
-                disabled={disabled}
-                style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#2d2d2d',
-                    border: '1px solid #444',
-                    borderRadius: '4px',
-                    color: '#e0e0e0',
-                    fontFamily: 'monospace'
-                }} />
-            <button
-                type="submit"
-                disabled={disabled || !input.trim()}
-                style={{
-                    padding: '12px 24px',
-                    background: disabled ? '#555' : '#ffd700',
-                    color: disabled ? '#999' : '#000',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    fontWeight: 'bold'
-                }}>
-                Execute
-            </button>
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (input.trim() && !disabled) {
+            onAction(input.trim());
+            setInput('');
+        }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit(e as any);
+        }
+
+        // Autouzupełnianie - strzałka w górę dla historii
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            // Tutaj można dodać historię komend
+        }
+    };
+
+    return (
+        <div className="panel">
+            <h2 className="section-title">Action</h2>
+
+            <form onSubmit={handleSubmit} className="action-form">
+                <div className="action-input-container">
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={placeholder}
+                        disabled={disabled}
+                        className="action-input"
+                        autoFocus
+                    />
+                    <button
+                        type="submit"
+                        disabled={disabled || !input.trim()}
+                        className="action-submit-btn"
+                    >
+                        {disabled ? '...' : 'Execute'}
+                    </button>
+                </div>
+
+            </form>
         </div>
-    </form>
-  );
+    );
 };

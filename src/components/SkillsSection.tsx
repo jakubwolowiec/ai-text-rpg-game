@@ -1,38 +1,45 @@
-// @ts-ignore
-import React from "react";
-import {Skills} from "../types/gameTypes";
-import {Panel, SectionTitle} from "../styles/GlobalStyles";
+import React from 'react';
+import { Skills, CharacterClass } from '../types/gameTypes';
+import '../App.css';
 
 interface SkillsSectionProps {
     skills: Skills;
+    characterClass?: CharacterClass;
 }
 
-export const SkillsSection: React.FC<SkillsSectionProps> = ({skills}) => {
-  const SkillList: React.FC<{title: string; skills: string[]}> = ({title, skills}) => (
-    <div style={{marginBottom: '20px'}}>
-        <h3 style={{color: '#ff6b6b', marginBottom: '10px'}}>{title}</h3>
-        <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
-            {skills.map((skill, index)=>(
-                <span
-                key={index}
-                style={{
-                    background: '#444',
-                    padding: '5px 10px',
-                    borderRadius: '15px',
-                    fontSize: '0.9em'
-                }}>
-                    {skill}
-                </span>
-            ))}
-        </div>
-    </div>
-  );
+export const SkillsSection: React.FC<SkillsSectionProps> = ({
+                                                                skills
+                                                            }) => {
 
-  return (
-    <Panel>
-        <SectionTitle>Skills</SectionTitle>
-        <SkillList title={"Magic Skills"} skills={skills.magic}/>
-        <SkillList title={"Non-Magic Skills"} skills={skills.nonMagic}/>
-    </Panel>
-  );
+    return (
+        <div className="panel">
+            <h2 className="section-title">Skills</h2>
+
+            <div className={`mb-6 p-4 border-l-4 border-l-purple`}>
+                <h3 className="text-lg font-bold mb-3 text-purple flex items-center gap-2">
+                    <span>🔮</span> Magic Skills
+                </h3>
+                <div className="skill-container">
+                    {skills.magic.map((skill, index) => (
+                        <span key={index} className="skill-chip magic">
+              {skill}
+            </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className={`p-4 border-l-4 border-l-gold`}>
+                <h3 className="text-lg font-bold mb-3 text-gold flex items-center gap-2">
+                    <span>⚔️</span> Non-Magic Skills
+                </h3>
+                <div className="skill-container">
+                    {skills.nonMagic.map((skill, index) => (
+                        <span key={index} className="skill-chip non-magic">
+              {skill}
+            </span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 };
