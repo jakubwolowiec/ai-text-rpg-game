@@ -2,6 +2,14 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Backend Setup (MySQL/Oracle HeatWave)
+
+1. Set up your Oracle HeatWave (MySQL) database
+2. Copy `.env.example` to `.env` and fill in your database credentials
+3. Run the database schema: `mysql -u your-user -p your-database < db/schema.sql`
+4. Start the backend server: `npm run server`
+5. For development with both client and server: `npm run dev`
+
 ## Available Scripts
 
 In the project directory, you can run:
@@ -13,6 +21,14 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 The page will reload if you make edits.\
 You will also see any lint errors in the console.
+
+### `npm run server`
+
+Runs the backend server on port 5000.
+
+### `npm run dev`
+
+Runs both the client and server concurrently.
 
 ### `npm test`
 

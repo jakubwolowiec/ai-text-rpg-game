@@ -7,12 +7,21 @@ export enum CharacterClass {
 
 export type ItemType = 'item' | 'weapon' | 'special' | 'consumable';
 
+export enum EnemyType {
+    GOBLIN = 'Goblin',
+    TROLL = 'Troll',
+    DRAGON = 'Dragon',}
+
 export interface Character {
-    id?: string;
+    id?: number;
     name: string;
-    age: string;
+    age: number;
     description: string;
+    hp: number;
     class: CharacterClass;
+    stats: Stats;
+    skills: Skills;
+    inventory: InventoryItem[];
 }
 
 export interface Stats {
@@ -26,9 +35,14 @@ export interface Stats {
     dexterity: number;
 }
 
+export interface Skill {
+    name: string;
+    power: number;
+}
+
 export interface Skills {
-    magic: string[];
-    nonMagic: string[];
+    magic: Skill[];
+    nonMagic: Skill[];
 }
 
 export interface InventoryItem {
@@ -37,6 +51,15 @@ export interface InventoryItem {
     type: ItemType;
     description?: string;
     quantity?: number;
+}
+
+export interface Enemy {
+    id: string;
+    type: EnemyType;
+    hp: number;
+    maxHp: number;
+    attack: number;
+    defence: number;
 }
 
 export interface GameState {
@@ -48,7 +71,29 @@ export interface GameState {
     gameLog: string[];
     currentScene: string;
     isEditing: boolean;
+    enemies: Enemy[];
 }
+
+export const EnemyTypes= {
+    [EnemyType.GOBLIN]: {
+        name: 'Goblin',
+        hp: 30,
+        attack: 5,
+        defence: 2
+    },
+    [EnemyType.TROLL]: {
+        name: 'Troll',
+        hp: 60,
+        attack: 10,
+        defence: 5
+    },
+    [EnemyType.DRAGON]: {
+        name: 'Dragon',
+        hp: 150,
+        attack: 20,
+        defence: 10
+    }
+};
 
 export const CharacterClasses = {
     [CharacterClass.MAGE]: {
@@ -64,8 +109,17 @@ export const CharacterClasses = {
             dexterity: 1
         },
         skills: {
-            magic: ['Fireball', 'Magic missile', 'Teleport', 'Shield'],
-            nonMagic: ['Alchemy', 'Appraisal', 'Secret knowledge']
+            magic: [
+                { name: 'Fireball', power: 6 },
+                { name: 'Magic missile', power: 4 },
+                { name: 'Teleport', power: 0 },
+                { name: 'Magic Shield', power: 5 }
+            ],
+            nonMagic: [
+                { name: 'Alchemy', power: 3 },
+                { name: 'Appraisal', power: 0 },
+                { name: 'Secret knowledge', power: 0 }
+            ]
         },
         startingInventory: [
             {id: '1', name: 'Spellbook', type: 'special' as const, description: 'Ancient tome of magic'},
@@ -86,8 +140,16 @@ export const CharacterClasses = {
             dexterity: 2
         },
         skills: {
-            magic: ['Heal', 'Bless', 'Protection', 'Turn undead'],
-            nonMagic: ['Medicine', 'Diplomacy', 'First aid']
+            magic: [
+                { name: 'Heal', power: 10 },
+                { name: 'Bless', power: 3 },
+                { name: 'Protection', power: 4 },
+                { name: 'Turn undead', power: 8 }
+            ],
+            nonMagic: [
+                { name: 'Medicine', power: 5 },
+                { name: 'Diplomacy', power: 0 }
+            ]
         },
         startingInventory: [
             {id: '1', name: 'Holy Symbol', type: 'special' as const, description: 'Symbol of a forgotten diety'},
@@ -108,8 +170,15 @@ export const CharacterClasses = {
             dexterity: 4
         },
         skills: {
-            magic: ['Berserk', 'Battle Cry'],
-            nonMagic: ['Athletics', 'Survival', 'Intimidation']
+            magic: [
+                { name: 'Berserk', power: 7 },
+                { name: 'Battle Cry', power: 2 }
+            ],
+            nonMagic: [
+                { name: 'Athletics', power: 0 },
+                { name: 'Survival', power: 0 },
+                { name: 'Intimidation', power: 0 }
+            ]
         },
         startingInventory: [
             {id: '1', name: 'Great Axe', type: 'weapon' as const, description: 'Massive two-handed axe'},
@@ -130,8 +199,17 @@ export const CharacterClasses = {
             dexterity: 7
         },
         skills: {
-            magic: ['Animal companion', 'Nature\'s Blessing'],
-            nonMagic: ['Archery', 'Stealth', 'Herbalism', 'Tracking', 'Survival']
+            magic: [
+                { name: 'Animal companion', power: 0 },
+                { name: 'Natures Blessing', power: 6 }
+            ],
+            nonMagic: [
+                { name: 'Archery', power: 0 },
+                { name: 'Stealth', power: 0 },
+                { name: 'Herbalism', power: 0 },
+                { name: 'Tracking', power: 0 },
+                { name: 'Survival', power: 0 }
+            ]
         },
         startingInventory: [
             {id: '1', name: 'Longbow', type: 'weapon' as const, description: 'Precise hunting bow'},

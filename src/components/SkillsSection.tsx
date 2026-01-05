@@ -22,7 +22,7 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({
                 <div className="skill-container">
                     {skills.magic.map((skill, index) => (
                         <span key={index} className="skill-chip magic">
-              {skill}
+              {skill.name} (Power: {skill.power})
             </span>
                     ))}
                 </div>
@@ -35,7 +35,7 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({
                 <div className="skill-container">
                     {skills.nonMagic.map((skill, index) => (
                         <span key={index} className="skill-chip non-magic">
-              {skill}
+              {skill.name} (Power: {skill.power})
             </span>
                     ))}
                 </div>

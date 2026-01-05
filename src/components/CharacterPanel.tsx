@@ -47,7 +47,7 @@ export const CharacterPanel: React.FC<CharacterPanelProps> = ({
             </div>
 
             <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div>
                         <div className="text-secondary">Name</div>
                         <div className="font-bold text-lg">{character.name}</div>
@@ -55,6 +55,10 @@ export const CharacterPanel: React.FC<CharacterPanelProps> = ({
                     <div>
                         <div className="text-secondary">Age</div>
                         <div className="font-bold">{character.age}</div>
+                    </div>
+                    <div>
+                        <div className="text-secondary">HP</div>
+                        <div className="font-bold text-red-400">{character.hp || 100}</div>
                     </div>
                 </div>
 
