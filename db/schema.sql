@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS  `game_sessions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `character_id` int DEFAULT NULL,
   `game_log` json DEFAULT NULL,
-  `current_scene` varchar(255) DEFAULT NULL,
+  `current_scene` varchar(888) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `game_sessions_characters_FK` (`character_id`),
   CONSTRAINT `game_sessions_characters_FK` FOREIGN KEY (`character_id`) REFERENCES `characters` (`id`) ON DELETE CASCADE
