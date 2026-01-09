@@ -5,7 +5,7 @@ import { StatsBars } from './components/StatsBars';
 import { SkillsSection } from './components/SkillsSection';
 import { Inventory } from './components/Inventory';
 import { GameLog } from './components/GameLog';
-import { Enemies } from './components/Enemies';
+import Enemies from './components/Enemies';
 import { ActionInput } from './components/ActionInput';
 import {
     GameState,
@@ -22,7 +22,7 @@ const createInitialCharacter = (charClass: CharacterClass = CharacterClass.MAGE)
         name: "Alandra",
         age: 15,
         description: "A mysterious traveler with unknown origins",
-        hp: 100,
+        hp: 25,
         class: charClass,
         stats: { ...classData.stats },
         skills: { ...classData.skills },
@@ -186,6 +186,9 @@ const App: React.FC = () => {
             return;
         }
 
+        // Normalize action for health potion and item use
+
+
         console.log('Setting loading to true');
         // Add placeholder to gameLog
         setGameState(prev => ({
@@ -195,7 +198,7 @@ const App: React.FC = () => {
         setIsLoading(true);
 
         try {
-            console.log('Calling ApiService.sendAction with:', { action, characterId: gameState.character.id, gameLog: gameState.gameLog, enemies: gameState.enemies });
+            console.log('Calling ApiService.sendAction with:', { action: action, characterId: gameState.character.id, gameLog: gameState.gameLog, enemies: gameState.enemies });
             const response = await ApiService.sendAction(action, gameState.character.id, gameState.gameLog, gameState.enemies);
             console.log('Received response from ApiService:', response);
 
@@ -205,15 +208,84 @@ const App: React.FC = () => {
                 const logWithoutThinking = prev.gameLog[prev.gameLog.length - 1] === 'The DM is thinking...'
                     ? prev.gameLog.slice(0, -1)
                     : prev.gameLog;
-                return {
-                    ...prev,
-                    character: { ...prev.character, hp: response.updatedHp },
-                    inventory: response.updatedInventory,
-                    gameLog: [...logWithoutThinking, response.gameLog[0]],
-                    currentScene: response.scene,
-                    enemies: response.enemies ? [...prev.enemies, ...response.enemies] : prev.enemies
+
+                    let updatedEnemies = [...prev.enemies];
+    
+    console.log('Response enemy:', response.enemy);
+    console.log('Response enemies:', response.enemies);
+    console.log('Current enemies:', prev.enemies);
+    
+    // Handle enemy from response (singular)
+    if (response.enemy) {
+        const existingEnemyIndex = updatedEnemies.findIndex(e => e.id === response.enemy.id);
+        
+        if (existingEnemyIndex >= 0) {
+            if (response.enemy.hp <= 0) {
+                // Remove defeated enemy
+                updatedEnemies = updatedEnemies.filter(e => e.id !== response.enemy.id);
+            } else {
+                // Update enemy HP
+                updatedEnemies[existingEnemyIndex] = {
+                    ...updatedEnemies[existingEnemyIndex],
+                    hp: response.enemy.hp
                 };
-            });
+            }
+        } else if (response.enemy.hp > 0) {
+            // Add new enemy
+            updatedEnemies = [...updatedEnemies, {
+                id: response.enemy.id,
+                type: response.enemy.type,
+                name: response.enemy.name || response.enemy.type,
+                hp: response.enemy.hp,
+                attack: response.enemy.attack,
+                defence: response.enemy.defence
+            }];
+        }
+    } else if (response.enemies && response.enemies.length > 0) {
+        // Fallback: handle array if backend returns it
+        const enemyData = response.enemies[0];
+        const existingEnemyIndex = updatedEnemies.findIndex(e => e.id === enemyData.id);
+    
+        if (existingEnemyIndex >= 0) {
+            if (enemyData.hp <= 0) {
+                // Remove defeated enemy
+                updatedEnemies = updatedEnemies.filter(e => e.id !== enemyData.id);
+            } else {
+                // Update enemy HP
+                updatedEnemies[existingEnemyIndex] = {
+                    ...updatedEnemies[existingEnemyIndex],
+                    hp: enemyData.hp
+                };
+            }
+        } else if (enemyData.hp > 0) {
+            // Add new enemy
+            updatedEnemies = [...updatedEnemies, {
+                id: enemyData.id,
+                type: enemyData.type,
+                name: enemyData.name || enemyData.type,
+                hp: enemyData.hp,
+                attack: enemyData.attack,
+                defence: enemyData.defence
+            }];
+        }
+    }
+    
+    console.log('Updated enemies:', updatedEnemies);
+    const updatedCharacter = {
+                ...prev.character,
+                hp: response.updatedHp !== undefined ? response.updatedHp : prev.character.hp
+            };
+
+    return {
+        ...prev,
+        character: updatedCharacter,
+        inventory: response.updatedInventory,
+        gameLog: [...logWithoutThinking, response.gameLog[0]],
+        currentScene: response.scene,
+        enemies: updatedEnemies
+    };
+})
+            
             console.log('Game state updated successfully');
         } catch (error) {
             console.error('Action error:', error);

@@ -13,25 +13,36 @@ const DEFAULT_MODEL: string | undefined = ENABLE_CLAUDE_HAIKU ? 'claude-haiku-4.
      updatedHp: number;
      updatedInventory: any[];
      enemies?: any[];
+     enemy?: any;
  }
 
  export class ApiService {
      // @ts-ignore
     static async sendAction(action: string, characterId: number, gameLog?: string[], enemies?: any[]): Promise<GameResponse> {
-        console.log('ApiService.sendAction called with:', { action, characterId, gameLog, enemies });
+        // Send enemy data including HP to narrator/AI backend for combat resolution
+        let enemiesForNarrator = undefined;
+        if (enemies && Array.isArray(enemies)) {
+            enemiesForNarrator = enemies.map(e => ({
+                id: e.id,
+                type: e.type,
+                name: e.name,
+                hp: e.hp
+            }));
+        }
+        console.log('ApiService.sendAction called with:', { action, characterId, gameLog, enemies: enemiesForNarrator });
         try {
             console.log('Making POST request to /api/action with payload:', {
                 action,
                 characterId,
                 gameLog,
-                enemies,
+                enemies: enemiesForNarrator,
                 timestamp: new Date().toISOString()
             });
             const response = await axios.post(`api/action`, {
                 action,
                 characterId,
                 gameLog,
-                enemies,
+                enemies: enemiesForNarrator,
                 timestamp: new Date().toISOString()
             });
             console.log('Received response from /api/action:', response.data);

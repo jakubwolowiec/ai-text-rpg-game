@@ -55,9 +55,9 @@ export interface InventoryItem {
 
 export interface Enemy {
     id: string;
-    type: EnemyType;
+    type?: EnemyType;
+    name?: string;
     hp: number;
-    maxHp: number;
     attack: number;
     defence: number;
 }

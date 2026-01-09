@@ -81,10 +81,10 @@ function getSkillsByClass(charClass) {
 // Helper function to get class-specific interpreter prompt
 function getInterpreterPromptByClass(charClass) {
   const promptMap = {
-    'Mage': "Analyze the user action and return only the appropriate tags only from: MSKILL:FIREBALL, MSKILL:MAGIC_MISSILE, MSKILL:TELEPORT, MSKILL:MAGIC_SHIELD, OSKILL:ALCHEMY, OSKILL:APPRAISAL, OSKILL:SECRET_KNOWLEDGE, ITEM:HEALTH_POTION, ITEM:STAFF, ITEM:SPELLBOOK, ATTACK. If none match, return NONE. User action: ",
-    'Cleric': "Analyze the user action and return only the appropriate tags only from: MSKILL:HEAL, MSKILL:BLESS, MSKILL:PROTECTION, MSKILL:TURN_UNDEAD, OSKILL:MEDICINE, OSKILL:DIPLOMACY, ITEM:HEALTH_POTION, ITEM:HOLY_SYMBOL, ITEM:MACE, ITEM:HEALING_KIT, ATTACK. If none match, return NONE. User action: ",
-    'Barbarian': "Analyze the user action and return only the appropriate tags only from: MSKILL:BERSERK, MSKILL:BATTLE_CRY, OSKILL:ATHLETICS, OSKILL:SURVIVAL, OSKILL:INTIMIDATION, ITEM:RATIONS, ITEM:GREAT_AXE, ITEM:TROPHY_NECKLACE, ATTACK. If none match, return NONE. User action: ",
-    'Ranger': "Analyze the user action and return only the appropriate tags only from: MSKILL:ANIMAL_COMPANION, MSKILL:NATURES_BLESSING, OSKILL:ARCHERY, OSKILL:STEALTH, OSKILL:HERBALISM, OSKILL:TRACKING, OSKILL:SURVIVAL, ITEM:ARROWS, ITEM:CLOAK, ITEM:LONGBOW, ITEM:HERBS, ATTACK. If none match, return NONE. User action: "
+    'Mage': "Classify the user action and return only the corresponding tag from this list. Return only the tag, no explanation or other text.\n\nTags:\nATTACK - for attacking or fighting an enemy\nMSKILL:FIREBALL - for casting fireball spell\nMSKILL:MAGIC_MISSILE - for casting magic missile spell\nMSKILL:TELEPORT - for teleporting\nMSKILL:MAGIC_SHIELD - for casting magic shield\nOSKILL:ALCHEMY - for performing alchemy\nOSKILL:APPRAISAL - for appraising items\nOSKILL:SECRET_KNOWLEDGE - for using secret knowledge\nITEM:HEALTH_POTION - for using or drinking health potion\nITEM:STAFF - for using staff\nITEM:SPELLBOOK - for using spellbook\n\nIf none match, return NONE.\n\nUser action: ",
+    'Cleric': "Classify the user action and return only the corresponding tag from this list. Return only the tag, no explanation or other text.\n\nTags:\nATTACK - for attacking or fighting an enemy\nMSKILL:HEAL - for casting heal spell\nMSKILL:BLESS - for casting bless spell\nMSKILL:PROTECTION - for casting protection spell\nMSKILL:TURN_UNDEAD - for turning undead\nOSKILL:MEDICINE - for performing medicine\nOSKILL:DIPLOMACY - for diplomacy\nITEM:HEALTH_POTION - for using or drinking health potion\nITEM:HOLY_SYMBOL - for using holy symbol\nITEM:MACE - for using mace\nITEM:HEALING_KIT - for using healing kit\n\nIf none match, return NONE.\n\nUser action: ",
+    'Barbarian': "Classify the user action and return only the corresponding tag from this list. Return only the tag, no explanation or other text.\n\nTags:\nATTACK - for attacking or fighting an enemy\nMSKILL:BERSERK - for going berserk\nMSKILL:BATTLE_CRY - for battle cry\nOSKILL:ATHLETICS - for athletics\nOSKILL:SURVIVAL - for survival\nOSKILL:INTIMIDATION - for intimidation\nITEM:RATIONS - for using rations\nITEM:GREAT_AXE - for using great axe\nITEM:TROPHY_NECKLACE - for using trophy necklace\n\nIf none match, return NONE.\n\nUser action: ",
+    'Ranger': "Classify the user action and return only the corresponding tag from this list. Return only the tag, no explanation or other text.\n\nTags:\nATTACK - for attacking or fighting an enemy\nMSKILL:ANIMAL_COMPANION - for animal companion\nMSKILL:NATURES_BLESSING - for nature's blessing\nOSKILL:ARCHERY - for archery\nOSKILL:STEALTH - for stealth\nOSKILL:HERBALISM - for herbalism\nOSKILL:TRACKING - for tracking\nOSKILL:SURVIVAL - for survival\nITEM:ARROWS - for using arrows\nITEM:CLOAK - for using cloak\nITEM:LONGBOW - for using longbow\nITEM:HERBS - for using herbs\n\nIf none match, return NONE.\n\nUser action: ",
   };
   return promptMap[charClass] || promptMap['Mage']; // Default to Mage if class not found
 }
@@ -142,19 +142,22 @@ app.get('/api/characters/:id', async (req, res) => {
 // AI Action endpoint
 app.post('/api/action', async (req, res) => {
   console.log('Received action:', req.body);
-  const { action, characterId, gameLog } = req.body;
+  const { action, characterId, gameLog, enemies } = req.body;
   if (!characterId) {
     console.log('No character ID provided');
     return res.status(400).json({ error: 'Character ID is required' });
   }
 
   let mechanicsInfo = '';
+  let currentEnemy = enemies && enemies.length > 0 ? enemies[0] : null; // Get enemy from request
+  
   try {
     console.log('Fetching character data for ID:', characterId);
     // Fetch current character
-    const [charRows] = await pool.execute(`
-      SELECT hp, inventory, class FROM characters WHERE id = ?
-    `, [characterId]);
+    const [charRows] = await pool.execute(
+      'SELECT hp, inventory, class FROM characters WHERE id = ?',
+      [characterId]
+    );
     if (charRows.length === 0) {
       console.log('Character not found');
       throw new Error('Character not found');
@@ -164,6 +167,17 @@ app.post('/api/action', async (req, res) => {
     let inventory = JSON.parse(charRows[0].inventory || '[]');
     let characterClass = charRows[0].class;
     console.log('Character data fetched: HP=', currentHp, 'Class=', characterClass, 'Inventory=', inventory);
+
+    // Player dexterity for defense
+    let dex;
+    switch(characterClass) {
+      case 'Mage': dex = 1; break;
+      case 'Cleric': dex = 2; break;
+      case 'Barbarian': dex = 4; break;
+      case 'Ranger': dex = 7; break;
+      default: dex = 5;
+    }
+
     // Interpreter step
     const interpreterPrompt = getInterpreterPromptByClass(characterClass);
     const interpreterQuery = interpreterPrompt + action;
@@ -179,11 +193,13 @@ app.post('/api/action', async (req, res) => {
 
     // Parse interpreter response for tags
     let interpretedAction = action; // default to original
-    const tags = interpreterResponse.trim().split(/\s+/).filter(tag => tag !== 'NONE');
+    const tags = interpreterResponse ? interpreterResponse.trim().split(/\s+/).filter(tag => tag !== 'NONE') : [];
+    let skillOrItem = null;
+    let firstTag = null;
+    
     if (tags.length > 0) {
       // Fish out the first relevant tag
-      const firstTag = tags[0];
-      let skillOrItem = null;
+      firstTag = tags[0];
       if (firstTag.startsWith('MSKILL:') || firstTag.startsWith('OSKILL:') || firstTag.startsWith('ITEM:') || firstTag === 'ATTACK') {
         skillOrItem = firstTag.split(':')[1] || firstTag; // for ATTACK, it's just ATTACK
       }
@@ -206,79 +222,98 @@ app.post('/api/action', async (req, res) => {
           } else {
             inventory.push({ id: '3', name: 'Health potion', type: 'consumable', quantity: 1 });
           }
-
           mechanicsInfo = 'You brew a health potion.';
         } else if (firstTag === 'ATTACK') {
           // Basic combat handling
-          // For demo, assume one enemy present (extend as needed)
-          let enemy = null;
-          if (Array.isArray(req.body.enemies) && req.body.enemies.length > 0) {
-            enemy = req.body.enemies[0];
-          }
-
-          // Fallback: try to find enemy in gameLog or elsewhere if needed
-          if (!enemy) {
-            // No enemy provided, skip combat
+          if (!currentEnemy) {
             mechanicsInfo = 'No enemy present to attack.';
           } else {
             // Player stats
-            const playerStats = [currentHp, 10]; // [hp, baseDMG], extend as needed
+            let dmg;
+            switch(characterClass) {
+              case 'Mage':
+                dmg = 8; // Intelligence-based
+                break;
+              case 'Cleric':
+                dmg = 6; // Faith-based  
+                break;
+              case 'Barbarian':
+                dmg = 12; // Strength-based
+                break;
+              case 'Ranger':
+                dmg = 9; // Dexterity-based
+                break;
+              default:
+                dmg = 5;
+            }
+            
             // Weapon DMG: find equipped weapon
             let weaponDMG = 5;
             const weapon = inventory.find(item => item.type === 'weapon' && item.equipped);
             if (weapon && weapon.dmg) weaponDMG = weapon.dmg;
-            // Monster stats
-            const monsterStats = [enemy.hp, enemy.attack, enemy.hitChance || 10];
-            // Roll
-            const playerRoll = Math.floor(Math.random() * 19) + 1;
-            const playerDMG = playerStats[0] + weaponDMG;
-            const monsterDMG = monsterStats[0];
-            const hitChance = monsterStats[1];
+            
+            const playerDMG = dmg + weaponDMG;
+            const hitChance = currentEnemy.defence || 10;
+            const playerRoll = Math.floor(Math.random() * 20) + 1;
+            
             if (playerRoll >= hitChance) {
-              enemy.hp -= playerDMG;
-              mechanicsInfo = `You attack the ${enemy.type} and deal ${playerDMG} damage!`;
-              if (enemy.hp <= 0) {
-                mechanicsInfo += ` The ${enemy.type} is defeated!`;
+              currentEnemy.hp -= playerDMG;
+              mechanicsInfo = `You attack the ${currentEnemy.name || currentEnemy.type} and deal ${playerDMG} damage!`;
+              
+              if (currentEnemy.hp <= 0) {
+                mechanicsInfo += ` The ${currentEnemy.name || currentEnemy.type} is defeated!`;
               }
             } else {
-              mechanicsInfo = `You attack the ${enemy.type} but miss!`;
+              mechanicsInfo = `You attack the ${currentEnemy.name || currentEnemy.type} but miss!`;
             }
+            
+            interpretedAction = `Player attacks: ${action}`;
           }
         } else if (firstTag.startsWith('MSKILL:')) {
-          // Spell attack (simplified)
-          let enemy = null;
-          if (Array.isArray(req.body.enemies) && req.body.enemies.length > 0) {
-            enemy = req.body.enemies[0];
-          }
-
-          if (!enemy) {
+          // Spell attack
+          if (!currentEnemy) {
             mechanicsInfo = 'No enemy present to cast spell on.';
           } else {
-            // For demo, spell power = 8
             const spellPower = 8;
-            enemy.hp -= spellPower;
-            mechanicsInfo = `You cast ${skillOrItem} on the ${enemy.type} and deal ${spellPower} damage!`;
-            if (enemy.hp <= 0) {
-              mechanicsInfo += ` The ${enemy.type} is defeated!`;
+            currentEnemy.hp -= spellPower;
+            mechanicsInfo = `You cast ${skillOrItem} on the ${currentEnemy.name || currentEnemy.type} and deal ${spellPower} damage!`;
+            if (currentEnemy.hp <= 0) {
+              mechanicsInfo += ` The ${currentEnemy.name || currentEnemy.type} is defeated!`;
             }
+            interpretedAction = `Player uses ${skillOrItem}: ${action}`;
           }
+        } else {
+          interpretedAction = `Player uses ${skillOrItem}: ${action}`;
         }
-
-        // Modify the action for the game AI
-        interpretedAction = `Player uses ${skillOrItem}: ${action}`;
         console.log('Interpreted action:', interpretedAction);
       }
-    };
+    }
 
-    //Update character in DB
+    // Enemy counterattack if alive and player damaged it
+    if (currentEnemy && currentEnemy.hp > 0 && firstTag && (firstTag === 'ATTACK' || firstTag.startsWith('MSKILL:'))) {
+      // Enemy retaliates
+      const enemyRoll = Math.floor(Math.random() * 7) + 1;
+      if (enemyRoll >= dex) {
+        const damage = currentEnemy.attack || 5; // Default to 5 if undefined
+        currentHp -= damage;
+        mechanicsInfo += ` The ${currentEnemy.name || currentEnemy.type} attacks you back and deals ${damage} damage!`;
+        if (currentHp <= 0) {
+          mechanicsInfo += ` You have been defeated by the ${currentEnemy.name || currentEnemy.type}!`;
+        }
+      } else {
+        mechanicsInfo += ` The ${currentEnemy.name || currentEnemy.type} attacks you back but misses!`;
+      }
+    }
+
+    // Update character in DB
     await pool.execute(
       'UPDATE characters SET hp = ?, inventory = ? WHERE id = ?',
       [currentHp, JSON.stringify(inventory), characterId]
     );
-    
+
     // Game AI step
-    const gamePrompt = `You are a narrator for a fantasy RPG game. Based on given user prompts and information about the game state, generate a short yet engaging narrative description. If a new enemy is present or the character is approached by a new enemy, add either ENEMY:GOBLIN, ENEMY:TROLL, or ENEMY:DRAGON tag at the end of your response in this exact format.\n\nGame State: `;
-    const gameStateInfo = `Game Log: ${JSON.stringify(gameLog || [])}\nUser Action: ${interpretedAction}`;
+    const gamePrompt = `You are a narrator for a fantasy RPG game. Based on the current user action and game state, generate a short, engaging narrative description. Only add ENEMY:GOBLIN, ENEMY:TROLL, or ENEMY:DRAGON tag at the end of your response if the user action explicitly indicates searching for or wanting to encounter an enemy, there is no current enemy, and no enemy was just defeated in this action. Do it only once.\n\nGame State: `;
+    const gameStateInfo = `Current Enemy: ${currentEnemy ? `${currentEnemy.name} (${currentEnemy.hp} HP)` : 'None'}\nUser Action: ${interpretedAction}`;
     const gameQuery = mechanicsInfo ? `${gamePrompt}${gameStateInfo}\n\n${mechanicsInfo}` : `${gamePrompt}${gameStateInfo}`;
     
     console.log('Game query:', gameQuery);
@@ -295,41 +330,52 @@ app.post('/api/action', async (req, res) => {
 
     console.log('Final game response:', gameResponse);
 
-    // Parse for enemy tags in format ENEMY:GOBLIN, ENEMY:TROLL, ENEMY:DRAGON
-    let enemy = null;
+    // Parse for enemy tags - only create new enemy if none exists and tag is present
+    let enemyToReturn = currentEnemy;
     const enemyTypes = {
-      'GOBLIN': { name: 'Goblin', hp: 30, attack: 5, defence: 2 },
-      'TROLL': { name: 'Troll', hp: 60, attack: 10, defence: 5 },
-      'DRAGON': { name: 'Dragon', hp: 150, attack: 20, defence: 10 }
+      'GOBLIN': { name: 'Goblin', hp: 20, attack: 5, defence: 2 },
+      'TROLL': { name: 'Troll', hp: 30, attack: 10, defence: 5 },
+      'DRAGON': { name: 'Dragon', hp: 40, attack: 20, defence: 10 }
     };
-    // Extract only the first enemy tag from response
-    const enemyTagRegex = /\s*ENEMY:(GOBLIN|TROLL|DRAGON)\s*/i;
-    const tagMatch = gameResponse.match(enemyTagRegex);
-    if (tagMatch) {
-      const tagType = tagMatch[1].toUpperCase();
-      const enemyData = enemyTypes[tagType];
-      if (enemyData) {
-        enemy = {
-          id: `enemy_${Date.now()}_${Math.random()}`,
-          type: enemyData.name,
-          hp: enemyData.hp,
-          maxHp: enemyData.hp,
-          attack: enemyData.attack,
-          defence: enemyData.defence
-        };
+
+    // Check for new enemy tag only if no current enemy exists and no enemy was just defeated
+    if (!enemyToReturn && !mechanicsInfo.includes('defeated') && !mechanicsInfo.includes('Defeated')) {
+      const enemyTagRegex = /\s*ENEMY:(GOBLIN|TROLL|DRAGON)\s*/i;
+      const tagMatch = gameResponse.match(enemyTagRegex);
+      if (tagMatch) {
+        console.log("Enemy tag found:", tagMatch[1]);
+        const tagType = tagMatch[1].toUpperCase();
+        const enemyData = enemyTypes[tagType];
+        if (enemyData) {
+          enemyToReturn = {
+            id: `enemy_${Date.now()}_${Math.random()}`,
+            type: enemyData.name,
+            name: enemyData.name,
+            hp: enemyData.hp,
+            attack: enemyData.attack,
+            defence: enemyData.defence
+          };
+          console.log("New enemy created:", enemyToReturn);
+        }
       }
     }
+
     // Remove enemy tags from response before displaying
     const cleanedGameResponse = gameResponse.replace(/\s*ENEMY:(GOBLIN|TROLL|DRAGON)\s*/gi, '').trim();
     console.log('Cleaned game response (tags removed):', cleanedGameResponse);
+    
+    // Always include the mechanics info in the response
+    const finalGameLog = mechanicsInfo ? [`${mechanicsInfo} ${cleanedGameResponse}`] : [cleanedGameResponse];
+    
     res.json({
       scene: cleanedGameResponse,
       choices: [],
-      gameLog: [cleanedGameResponse],
+      gameLog: finalGameLog, // Make sure this is a flat array of strings
       updatedHp: currentHp,
       updatedInventory: inventory,
-      enemy: enemy // Only one enemy per encounter
+      enemy: enemyToReturn // This can be null if no enemy
     });
+    
   } catch (error) {
     console.error('Error processing action:', error);
     res.status(500).json({ error: 'Failed to process action' });
@@ -437,5 +483,4 @@ app.put('/api/characters/:id', async (req, res) => {
 // Start server
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  await testConnection();
-});
+  await testConnection(); });
