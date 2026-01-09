@@ -310,7 +310,7 @@ const App: React.FC = () => {
             {/* Game Header */}
             <div className="game-header">
                 <div className="game-header-content">
-                    <h1 className="game-title">🎮 AI Text RPG Adventure</h1>
+                    <h1 className="game-title">🎮 Your AI RPG Adventure</h1>
                     <button className="session-btn" onClick={() => setIsSessionModalOpen(true)}>💾 Save/Load Session</button>
                 </div>
             </div>
